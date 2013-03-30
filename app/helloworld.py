@@ -41,7 +41,8 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     filekey.blobinfokey = str(blob_info.key())
     self.response.out.write("Blob info key:")
     self.response.out.write(blob_info.key())
-
+    
+    filekey.put()
     #memcache.add("file001", blob_info)
     #self.redirect('/serve/%s' % blob_info.key())
 
@@ -53,9 +54,14 @@ class ServeHandler(blobstore_handlers.BlobstoreDownloadHandler):
 
 class ListHandler(webapp2.RequestHandler):
   def get(self):
-    memcachedict = memcache.get_multi("file001")
-    self.response.out.write('List:')
-    self.response.out.write(memcache.get("file001"))
+    filekeys = db.GqlQuery("SELECT * "
+                            "FROM FileKey "
+                            "WHERE ANCESTOR IS :1 ",
+                            filelist_key())
+    self.response.out.write("List:")
+    for filekey in filekeys:
+      self.response.out.write(filekey.fkey)
+      self.response.out.write('</br>')
 
 app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/upload', UploadHandler),
