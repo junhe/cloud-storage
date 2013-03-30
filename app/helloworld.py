@@ -23,6 +23,15 @@ class MainHandler(webapp2.RequestHandler):
     self.response.out.write('File Key:<input type="text" name="filekey">')
     self.response.out.write("""Upload File: <input type="file" name="file"><br> <input type="submit"
         name="submit" value="Submit"> </form>""")
+        
+    self.response.out.write("""
+          <hr>
+          <form action="/check" method="post">
+            <div>File Key:<input type="text" name="filekey"></div>
+            <div><input type="submit" value="Check This File Key"></div>
+          </form>
+          <hr>""")
+        
     self.response.out.write("""<a href="/list">List</a>""")
     self.response.out.write('</body></html>')
 
@@ -56,15 +65,30 @@ class ListHandler(webapp2.RequestHandler):
   def get(self):
     filekeys = db.GqlQuery("SELECT * "
                             "FROM FileKey "
-                            "WHERE ANCESTOR IS :1 ",
+                            "WHERE ANCESTOR IS :1",# AND fkey IN ('ttt')",
                             filelist_key())
-    self.response.out.write("List:")
+    self.response.out.write("<b>List</b>:</br>")
     for filekey in filekeys:
       self.response.out.write(filekey.fkey)
       self.response.out.write('</br>')
 
+class CheckHandler(webapp2.RequestHandler):
+  def post(self):
+    fkey = self.request.get("filekey")
+    #self.response.out.write("fkey:"+fkey)
+    filekeys = db.GqlQuery("SELECT * "
+                            "FROM FileKey "
+                            "WHERE ANCESTOR IS :1 AND fkey IN ('%s')" % fkey,
+                            filelist_key())
+    #self.response.out.write("The KEYS:" + str(filekeys.count()))
+    if filekeys.count() == 0 :
+      self.response.out.write("Key(%s) does NOT exists." % fkey)
+    else:
+      self.response.out.write("Key(%s) exists." % fkey)
+      
 app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/upload', UploadHandler),
                                ('/list', ListHandler),
+                               ('/check', CheckHandler),
                                ('/serve/([^/]+)?', ServeHandler)],
                               debug=True)
