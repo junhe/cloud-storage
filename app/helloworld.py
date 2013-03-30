@@ -31,7 +31,14 @@ class MainHandler(webapp2.RequestHandler):
             <div><input type="submit" value="Check This File Key"></div>
           </form>
           <hr>""")
-        
+    self.response.out.write("""
+          <hr>
+          <form action="/download" method="post">
+            <div>File Key:<input type="text" name="filekey"></div>
+            <div><input type="submit" value="Download"></div>
+          </form>
+          <hr>""")
+    
     self.response.out.write("""<a href="/list">List</a>""")
     self.response.out.write('</body></html>')
 
@@ -40,7 +47,8 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     filekey = FileKey(parent=filelist_key())
 
     # save the file key and blobinfokey to Datastore
-    filekey.fkey = self.request.get("filekey")
+    mykey = self.request.get("filekey")
+    filekey.fkey = mykey
     self.response.out.write("File key:")
     self.response.out.write(filekey)
          
@@ -51,8 +59,10 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     self.response.out.write("Blob info key:")
     self.response.out.write(blob_info.key())
     
+    memcache.add(mykey, blob_info)
+    
     filekey.put()
-    #memcache.add("file001", blob_info)
+    
     #self.redirect('/serve/%s' % blob_info.key())
 
 class ServeHandler(blobstore_handlers.BlobstoreDownloadHandler):
@@ -85,10 +95,28 @@ class CheckHandler(webapp2.RequestHandler):
       self.response.out.write("Key(%s) does NOT exists." % fkey)
     else:
       self.response.out.write("Key(%s) exists." % fkey)
+
+class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
+  def post(self):
+    fkey = self.request.get("filekey")
+    #self.response.out.write("fkey:"+fkey)
+    filekeys = db.GqlQuery("SELECT * "
+                            "FROM FileKey "
+                            "WHERE ANCESTOR IS :1 AND fkey IN ('%s')" % fkey,
+                            filelist_key())
+    #self.response.out.write("The KEYS:" + str(filekeys.count()))
+    if filekeys.count() == 0 :
+      self.response.out.write("Key(%s) does NOT exists." % fkey)
+    else:
+      blob_info = memcache.get(fkey) #blobstore.BlobInfo.get(resource)
+      self.send_blob(blob_info)
+    
+    
       
 app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/upload', UploadHandler),
                                ('/list', ListHandler),
                                ('/check', CheckHandler),
+                               ('/download', DownloadHandler),
                                ('/serve/([^/]+)?', ServeHandler)],
                               debug=True)
