@@ -93,12 +93,6 @@ class ListHandler(webapp2.RequestHandler):
 class CheckHandler(webapp2.RequestHandler):
   def post(self):
     fkeystr = self.request.get("filekey")
-    #self.response.out.write("fkey:"+fkey)
-    #filekeys = db.GqlQuery("SELECT * "
-    #                        "FROM FileKey "
-    #                        "WHERE ANCESTOR IS :1 AND fkey IN ('%s')" % fkey,
-    #                        filelist_key())
-    #self.response.out.write("The KEYS:" + str(filekeys.count()))
     filekeys = FileKey.all()
     filekeys.filter('__key__ =', db.Key.from_path("FileKey", fkeystr, parent=filelist_key()))
     if filekeys.count() == 0:
@@ -108,32 +102,31 @@ class CheckHandler(webapp2.RequestHandler):
 
 class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
   def post(self):
-    fkey = self.request.get("filekey")
-    #self.response.out.write("fkey:"+fkey)
-    filekeys = db.GqlQuery("SELECT * "
-                            "FROM FileKey "
-                            "WHERE ANCESTOR IS :1 AND fkey IN ('%s')" % fkey,
-                            filelist_key())
-    #self.response.out.write("The KEYS:" + str(filekeys.count()))
-    if filekeys.count() == 0 :
-      self.response.out.write("Key(%s) does NOT exists." % fkey)
+    fkeystr = self.request.get("filekey")
+    filekeys = FileKey.all()
+    filekeys.filter('__key__ =', db.Key.from_path("FileKey", fkeystr, parent=filelist_key()))
+    if filekeys.count() == 0:
+      self.response.out.write("Key(%s) does NOT exists." % fkeystr)
     else:
-      blob_info = memcache.get(fkey) #blobstore.BlobInfo.get(resource)
+      blob_info = memcache.get(fkeystr) #blobstore.BlobInfo.get(resource)
       self.send_blob(blob_info)
     
 class RemoveHandler(webapp2.RequestHandler):
   def post(self):
-    fkey = self.request.get("filekey")
-    #self.response.out.write("fkey:"+fkey)
-    filekeys = db.GqlQuery("SELECT * "
-                            "FROM FileKey "
-                            "WHERE ANCESTOR IS :1 AND fkey IN ('%s')" % fkey,
-                            filelist_key())
-    #self.response.out.write("The KEYS:" + str(filekeys.count()))
-    if filekeys.count() == 0 :
-      self.response.out.write("Key(%s) does NOT exists." % fkey)
+    fkeystr = self.request.get("filekey")
+    filekeys = FileKey.all()
+    thekey = db.Key.from_path("FileKey", fkeystr, parent=filelist_key())
+    filekeys.filter('__key__ =', thekey)
+    if filekeys.count() == 0:
+      self.response.out.write("Key(%s) does NOT exists." % fkeystr)
     else:
-      self.response.out.write("Key(%s) exists." % fkey)
+      db.delete(thekey)
+      self.response.out.write("Key(%s) removed." % fkeystr)
+      
+  
+  
+  
+  
       
 app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/upload', UploadHandler),
