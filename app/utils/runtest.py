@@ -1,11 +1,18 @@
 #!/usr/bin/env python
 
+import threading
+import time
 import requests
+import sys
 from datetime import datetime
 # Change this if you want to use it in 
 # different places, for example jhecs553pa3.appspot.com or 
 # localhost:8080
 appurl = "http://localhost:8080"
+threadLock = threading.Lock()
+last_filenum = -1
+threads = []
+nfiles = 100
 
 def insert(fkey, fpath):
     """
@@ -18,7 +25,7 @@ def insert(fkey, fpath):
     payload = {'filekey':fkey}
     files = {'file': open(fpath, 'r')}
     r = requests.post(uploadurl, data=payload, files=files)
-    #print r.text
+    print r.text
     end_time = datetime.now()
     return (end_time-start_time).total_seconds()
 
@@ -67,13 +74,52 @@ def filesizelist():
     return sizestore
 
 
+##################################
+### For multi threading
+##################################
+
+class myThread (threading.Thread):
+    def __init__(self, threadID):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+    def run(self):
+        global last_filenum
+        print "Starting " + self.name
+        threadLock.acquire()
+        my_filenum = last_filenum + 1
+        last_filenum = my_filenum
+        threadLock.release()
+        
+        while my_filenum < nfiles:
+            insert(str(my_filenum), 
+                   "testfiles/"+str(my_filenum)+".txt")
+            threadLock.acquire()
+            my_filenum = last_filenum + 1
+            last_filenum = my_filenum
+            threadLock.release()
+
+
 
 if __name__ == '__main__':
-    print insert('1.txt', 'testfiles/1.txt')
-    print check('1.txt')
-    print find('1.txt')
-    print remove('1.txt')
-    print glist()
+    #
+    #print insert('1.txt', 'testfiles/1.txt')
+    #print check('1.txt')
+    #print find('1.txt')
+    #print remove('1.txt')
+    #print glist()
     
-    filesizes = filesizelist()
-    print filesizes
+    #filesizes = filesizelist()
+    #print filesizes
+    
+    if len(sys.argv) != 2:
+        print "Usage: %s NumThreads" % sys.argv[0]
+        sys.exit(0)
+    nthreads = int(sys.argv[1])
+    for threadid in range(0, nthreads):
+        t = myThread(threadid)
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+    print "Exiting main thread"
