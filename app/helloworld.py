@@ -80,7 +80,7 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     self.response.out.write("</br>Blob info size:")
     self.response.out.write(blob_info.size)
     
-    if 0: #blob_info.size <= BIGFILEBASE:
+    if blob_info.size <= BIGFILEBASE:
       # small file, put to memcache
       memcache.add(mykey, blob_info)
       filekey.filelocation = "memcache"
@@ -139,7 +139,7 @@ class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
       self.response.out.write("Key(%s) does NOT exists." % fkeystr)
     else:
       for ifile in filekeys:
-        if 0: #ifile.filelocation == "memcache":
+        if ifile.filelocation == "memcache":
           blob_info = memcache.get(ifile.key().id_or_name()) 
           self.send_blob(blob_info)
         else:
@@ -149,6 +149,7 @@ class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
             while buf:
                 self.response.out.write(buf)
                 buf = fp.read(1000000)
+          self.response.out.write("From Google Cloud Storage file:" + ifile.key().id_or_name())
     
 class RemoveHandler(webapp2.RequestHandler):
   def post(self):
