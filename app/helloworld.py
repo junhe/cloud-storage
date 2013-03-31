@@ -9,7 +9,7 @@ from google.appengine.api import memcache
 
 class FileKey(db.Model):
   """The key of of the file in memcache and cloud storage"""
-  fkey = db.StringProperty()
+  #fkey = db.StringProperty()
   blobinfokey = db.StringProperty()
 
 def filelist_key():
@@ -23,7 +23,7 @@ class MainHandler(webapp2.RequestHandler):
     self.response.out.write('File Key:<input type="text" name="filekey">')
     self.response.out.write("""Upload File: <input type="file" name="file"><br> <input type="submit"
         name="submit" value="Submit"> </form>""")
-        
+    # check    
     self.response.out.write("""
           <hr>
           <form action="/check" method="post">
@@ -31,6 +31,15 @@ class MainHandler(webapp2.RequestHandler):
             <div><input type="submit" value="Check This File Key"></div>
           </form>
           <hr>""")
+    # delete
+    self.response.out.write("""
+          <hr>
+          <form action="/remove" method="post">
+            <div>File Key:<input type="text" name="filekey"></div>
+            <div><input type="submit" value="Remove"></div>
+          </form>
+          <hr>""")          
+    # Download     
     self.response.out.write("""
           <hr>
           <form action="/download" method="post">
@@ -38,19 +47,17 @@ class MainHandler(webapp2.RequestHandler):
             <div><input type="submit" value="Download"></div>
           </form>
           <hr>""")
-    
+    # List
     self.response.out.write("""<a href="/list">List</a>""")
     self.response.out.write('</body></html>')
 
 class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
   def post(self):
-    filekey = FileKey(parent=filelist_key())
-
     # save the file key and blobinfokey to Datastore
     mykey = self.request.get("filekey")
-    filekey.fkey = mykey
+    filekey = FileKey(key_name =mykey, parent=filelist_key())
     self.response.out.write("File key:")
-    self.response.out.write(filekey)
+    self.response.out.write(filekey.name())
          
 
     upload_files = self.get_uploads('file')  # 'file' is file upload field in the form
@@ -73,13 +80,14 @@ class ServeHandler(blobstore_handlers.BlobstoreDownloadHandler):
 
 class ListHandler(webapp2.RequestHandler):
   def get(self):
-    filekeys = db.GqlQuery("SELECT * "
-                            "FROM FileKey "
-                            "WHERE ANCESTOR IS :1",# AND fkey IN ('ttt')",
-                            filelist_key())
+    #filekeys = db.GqlQuery("SELECT * "
+    #                        "FROM FileKey "
+    #                        "WHERE ANCESTOR IS :1",# AND fkey IN ('ttt')",
+    #                        filelist_key())
+    filekeys = FileKey.all()
     self.response.out.write("<b>List</b>:</br>")
     for filekey in filekeys:
-      self.response.out.write(filekey.fkey)
+      self.response.out.write(filekey.key().id_or_name())
       self.response.out.write('</br>')
 
 class CheckHandler(webapp2.RequestHandler):
@@ -111,12 +119,25 @@ class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
       blob_info = memcache.get(fkey) #blobstore.BlobInfo.get(resource)
       self.send_blob(blob_info)
     
-    
+class RemoveHandler(webapp2.RequestHandler):
+  def post(self):
+    fkey = self.request.get("filekey")
+    #self.response.out.write("fkey:"+fkey)
+    filekeys = db.GqlQuery("SELECT * "
+                            "FROM FileKey "
+                            "WHERE ANCESTOR IS :1 AND fkey IN ('%s')" % fkey,
+                            filelist_key())
+    #self.response.out.write("The KEYS:" + str(filekeys.count()))
+    if filekeys.count() == 0 :
+      self.response.out.write("Key(%s) does NOT exists." % fkey)
+    else:
+      self.response.out.write("Key(%s) exists." % fkey)
       
 app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/upload', UploadHandler),
                                ('/list', ListHandler),
                                ('/check', CheckHandler),
                                ('/download', DownloadHandler),
+                               ('/remove', RemoveHandler),
                                ('/serve/([^/]+)?', ServeHandler)],
                               debug=True)
