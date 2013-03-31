@@ -44,7 +44,7 @@ class MainHandler(webapp2.RequestHandler):
           <hr>
           <form action="/download" method="post">
             <div>File Key:<input type="text" name="filekey"></div>
-            <div><input type="submit" value="Download"></div>
+            <div><input type="submit" value="Find/Download"></div>
           </form>
           <hr>""")
     # List
