@@ -57,7 +57,7 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     mykey = self.request.get("filekey")
     filekey = FileKey(key_name =mykey, parent=filelist_key())
     self.response.out.write("File key:")
-    self.response.out.write(filekey.name())
+    self.response.out.write(filekey.key().id_or_name())
          
 
     upload_files = self.get_uploads('file')  # 'file' is file upload field in the form
@@ -92,17 +92,19 @@ class ListHandler(webapp2.RequestHandler):
 
 class CheckHandler(webapp2.RequestHandler):
   def post(self):
-    fkey = self.request.get("filekey")
+    fkeystr = self.request.get("filekey")
     #self.response.out.write("fkey:"+fkey)
-    filekeys = db.GqlQuery("SELECT * "
-                            "FROM FileKey "
-                            "WHERE ANCESTOR IS :1 AND fkey IN ('%s')" % fkey,
-                            filelist_key())
+    #filekeys = db.GqlQuery("SELECT * "
+    #                        "FROM FileKey "
+    #                        "WHERE ANCESTOR IS :1 AND fkey IN ('%s')" % fkey,
+    #                        filelist_key())
     #self.response.out.write("The KEYS:" + str(filekeys.count()))
-    if filekeys.count() == 0 :
-      self.response.out.write("Key(%s) does NOT exists." % fkey)
+    filekeys = FileKey.all()
+    filekeys.filter('__key__ =', db.Key.from_path("FileKey", fkeystr, parent=filelist_key()))
+    if filekeys.count() == 0:
+      self.response.out.write("Key(%s) does NOT exists." % fkeystr)
     else:
-      self.response.out.write("Key(%s) exists." % fkey)
+      self.response.out.write("Key(%s) exists." % fkeystr)
 
 class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
   def post(self):
