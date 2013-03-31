@@ -114,6 +114,9 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         print "Usage: %s NumThreads" % sys.argv[0]
         sys.exit(0)
+
+    start_time = datetime.now()
+
     nthreads = int(sys.argv[1])
     for threadid in range(0, nthreads):
         t = myThread(threadid)
@@ -122,4 +125,11 @@ if __name__ == '__main__':
 
     for t in threads:
         t.join()
-    print "Exiting main thread"
+    
+    end_time = datetime.now()
+    # nthreads operations totaltime
+    print nthreads, "insert", (end_time-start_time).total_seconds()
+
+
+
+
