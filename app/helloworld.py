@@ -92,7 +92,12 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
                                      acl='public-read')
       # Write to the file.
       with files.open(write_path, 'a') as fp:
-          fp.write( blobstore.fetch_data(blob_info, 0, 100))
+        rstart = 0
+        fsize = blob_info.size
+        fetchsize = blobstore.MAX_BLOB_FETCH_SIZE - 1
+        while rstart < fsize:
+          fp.write( blobstore.fetch_data(blob_info, rstart, rstart+fetchsize))
+          rstart = rstart + fetchsize
       # Finalize the file so it is readable in Google Cloud Storage.
       files.finalize(write_path)
       filekey.filelocation = "cloudstorage"
