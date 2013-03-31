@@ -106,7 +106,7 @@ class MainPage(webapp2.RequestHandler):
 class CreatePage(webapp2.RequestHandler):
     """Creates a Cloud Storage object that multiple requests can write to."""
 
-    BUCKET = '/gs/buckcs553pa3'  # TODO: Change to a bucket your app can write to.
+    BUCKET = 'buckcs553pa3'  # TODO: Change to a bucket your app can write to. (ONLY the Bucket name, not path)
 
     def post(self):
         """Create a event log that multiple requests can build.
