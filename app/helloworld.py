@@ -16,6 +16,7 @@ except AttributeError:
 
 
 BIGFILEBASE = 100*1024     #< 100 KB is a small file
+BUCKET_PATH = '/gs/buckcs553pa3'
 
 class FileKey(db.Model):
   """The key of of the file in memcache and cloud storage"""
@@ -63,7 +64,6 @@ class MainHandler(webapp2.RequestHandler):
     self.response.out.write('</body></html>')
 
 class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
-  BUCKET_PATH = '/gs/buckcs553pa3'
   def post(self):
     # save the file key and blobinfokey to Datastore
     mykey = self.request.get("filekey")
@@ -88,7 +88,7 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     else:
       self.response.out.write("</br> File saved to Google Cloud Storage. (Not implemented yet)")
       # use filekey key name as the obj name in bucket
-      write_path = files.gs.create(self.BUCKET_PATH+"/"+filekey.key().id_or_name(), mime_type='text/plain',
+      write_path = files.gs.create(BUCKET_PATH+"/"+filekey.key().id_or_name(), mime_type='text/plain',
                                      acl='public-read')
       # Write to the file.
       with files.open(write_path, 'a') as fp:
@@ -139,11 +139,16 @@ class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
       self.response.out.write("Key(%s) does NOT exists." % fkeystr)
     else:
       for ifile in filekeys:
-        if ifile.filelocation == "memcache":
+        if 0: #ifile.filelocation == "memcache":
           blob_info = memcache.get(ifile.key().id_or_name()) 
           self.send_blob(blob_info)
         else:
-          self.response.out.write("File is in Cloud Storage (Not Implemented")
+          #self.response.out.write("File is in Cloud Storage (Not Implemented")
+          with files.open(BUCKET_PATH+"/"+ifile.key().id_or_name(), 'r') as fp:
+            buf = fp.read(1000000)
+            while buf:
+                self.response.out.write(buf)
+                buf = fp.read(1000000)
     
 class RemoveHandler(webapp2.RequestHandler):
   def post(self):
