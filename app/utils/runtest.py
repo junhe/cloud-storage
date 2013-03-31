@@ -45,11 +45,35 @@ def remove(fkey):
     end_time = datetime.now()
     print r.text
     return (end_time-start_time).total_seconds()
-  
+
+def glist():
+    start_time = datetime.now()
+    r = requests.get(appurl+"/list")
+    end_time = datetime.now()
+    print r.text
+    return (end_time-start_time).total_seconds()
+
+def filesizelist():
+    filecounts = [100, 100, 100, 100,  10,    1]
+    filesizes =  [1,   10,  100, 1024, 10240, 102400] # KB
+    sizestore = []
+    sn = 0
+    for i in range(0, 6):
+        cnt = filecounts[i]
+        sz = filesizes[i]
+        for j in range(0, cnt):
+            sizestore.append(sz)
+            sn = sn + 1
+    return sizestore
+
+
 
 if __name__ == '__main__':
     print insert('1.txt', 'testfiles/1.txt')
     print check('1.txt')
     print find('1.txt')
     print remove('1.txt')
-
+    print glist()
+    
+    filesizes = filesizelist()
+    print filesizes
