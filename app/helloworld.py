@@ -7,10 +7,13 @@ from google.appengine.ext import blobstore
 from google.appengine.ext.webapp import blobstore_handlers
 from google.appengine.api import memcache
 
+BIGFILEBASE = 100*1024     #< 100 KB is a small file
+
 class FileKey(db.Model):
   """The key of of the file in memcache and cloud storage"""
   #fkey = db.StringProperty()
   blobinfokey = db.StringProperty()
+  filelocation = db.StringProperty() # the location of the file: "memcache" or "cloudstorage"
 
 def filelist_key():
   return  db.Key.from_path('Filelist', 'default_filelist')
@@ -63,10 +66,18 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     upload_files = self.get_uploads('file')  # 'file' is file upload field in the form
     blob_info = upload_files[0]
     filekey.blobinfokey = str(blob_info.key())
-    self.response.out.write("Blob info key:")
+    self.response.out.write("</br>Blob info key:")
     self.response.out.write(blob_info.key())
+    self.response.out.write("</br>Blob info size:")
+    self.response.out.write(blob_info.size)
     
-    memcache.add(mykey, blob_info)
+    if blob_info.size <= BIGFILEBASE:
+      # small file, put to memcache
+      memcache.add(mykey, blob_info)
+      filekey.filelocation = "memcache"
+      self.response.out.write("</br> File saved to memcache")
+    else:
+      self.response.out.write("</br> File saved to Google Cloud Storage. (Not implemented yet)")
     
     filekey.put()
     
@@ -108,8 +119,12 @@ class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
     if filekeys.count() == 0:
       self.response.out.write("Key(%s) does NOT exists." % fkeystr)
     else:
-      blob_info = memcache.get(fkeystr) #blobstore.BlobInfo.get(resource)
-      self.send_blob(blob_info)
+      for ifile in filekeys:
+        if ifile.filelocation == "memcache":
+          blob_info = memcache.get(ifile.key().id_or_name()) 
+          self.send_blob(blob_info)
+        else:
+          self.response.out.write("File is in Cloud Storage (Not Implemented")
     
 class RemoveHandler(webapp2.RequestHandler):
   def post(self):
