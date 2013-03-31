@@ -168,16 +168,17 @@ class RemoveHandler(webapp2.RequestHandler):
       db.delete(thekey)
       self.response.out.write("Key(%s) removed." % fkeystr)
       
-  
-  
-  
-  
+class UploadURLHandler(webapp2.RequestHandler):
+  def get(self):
+    upload_url = blobstore.create_upload_url('/upload')
+    self.response.out.write(upload_url)  
       
 app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/upload', UploadHandler),
+                               ('/uploadurl', UploadURLHandler),
                                ('/list', ListHandler),
                                ('/check', CheckHandler),
                                ('/download', DownloadHandler),
-                               ('/remove', RemoveHandler),
+                               ('/remove', RemoveHandler),                               
                                ('/serve/([^/]+)?', ServeHandler)],
                               debug=True)
