@@ -6,6 +6,14 @@ from google.appengine.ext import db
 from google.appengine.ext import blobstore
 from google.appengine.ext.webapp import blobstore_handlers
 from google.appengine.api import memcache
+from google.appengine.api import files
+
+try:
+    files.gs
+except AttributeError:
+    import gs
+    files.gs = gs
+
 
 BIGFILEBASE = 100*1024     #< 100 KB is a small file
 
@@ -55,6 +63,7 @@ class MainHandler(webapp2.RequestHandler):
     self.response.out.write('</body></html>')
 
 class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
+  BUCKET_PATH = '/gs/buckcs553pa3'
   def post(self):
     # save the file key and blobinfokey to Datastore
     mykey = self.request.get("filekey")
@@ -71,13 +80,23 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     self.response.out.write("</br>Blob info size:")
     self.response.out.write(blob_info.size)
     
-    if blob_info.size <= BIGFILEBASE:
+    if 0: #blob_info.size <= BIGFILEBASE:
       # small file, put to memcache
       memcache.add(mykey, blob_info)
       filekey.filelocation = "memcache"
       self.response.out.write("</br> File saved to memcache")
     else:
       self.response.out.write("</br> File saved to Google Cloud Storage. (Not implemented yet)")
+      # use filekey key name as the obj name in bucket
+      write_path = files.gs.create(self.BUCKET_PATH+"/"+filekey.key().id_or_name(), mime_type='text/plain',
+                                     acl='public-read')
+      # Write to the file.
+      with files.open(write_path, 'a') as fp:
+          fp.write( blobstore.fetch_data(blob_info, 0, 100))
+      # Finalize the file so it is readable in Google Cloud Storage.
+      files.finalize(write_path)
+      filekey.filelocation = "cloudstorage"
+      self.response.out.write("File saved to Google Cloud Storage.</br>")
     
     filekey.put()
     
