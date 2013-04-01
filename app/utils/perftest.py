@@ -5,7 +5,7 @@ import itertools,subprocess
 import sys
 from time import gmtime, strftime
 
-nthreads = ["1","2","4","8"]
+nthreads = ["1","4"]
 operations = ["insert", "find", "remove"]
 
 parameters = [nthreads, operations]

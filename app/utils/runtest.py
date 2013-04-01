@@ -8,11 +8,11 @@ from datetime import datetime
 # Change this if you want to use it in 
 # different places, for example jhecs553pa3.appspot.com or 
 # localhost:8080
-appurl = "http://localhost:8080"
+appurl = "http://jhecs553.appspot.com"
 threadLock = threading.Lock()
 last_filenum = -1
 threads = []
-nfiles = 8
+nfiles = 411
 
 def insert(fkey, fpath):
     """
