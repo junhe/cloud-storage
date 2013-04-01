@@ -12,7 +12,7 @@ appurl = "http://localhost:8080"
 threadLock = threading.Lock()
 last_filenum = -1
 threads = []
-nfiles = 100
+nfiles = 8
 
 def insert(fkey, fpath):
     """
@@ -25,7 +25,7 @@ def insert(fkey, fpath):
     payload = {'filekey':fkey}
     files = {'file': open(fpath, 'r')}
     r = requests.post(uploadurl, data=payload, files=files)
-    print r.text
+    #print r.text
     end_time = datetime.now()
     return (end_time-start_time).total_seconds()
 
@@ -34,7 +34,7 @@ def check(fkey):
     payload = {'filekey':fkey}
     r = requests.post(appurl+"/check", data=payload)
     end_time = datetime.now()
-    print r.text
+    #print r.text
     return (end_time-start_time).total_seconds()
 
 def find(fkey):
@@ -42,7 +42,7 @@ def find(fkey):
     payload = {'filekey':fkey}
     r = requests.post(appurl+"/download", data=payload)
     end_time = datetime.now()
-    print r.text
+    #print r.text
     return (end_time-start_time).total_seconds()
 
 def remove(fkey):
@@ -50,14 +50,14 @@ def remove(fkey):
     payload = {'filekey':fkey}
     r = requests.post(appurl+"/remove", data=payload)
     end_time = datetime.now()
-    print r.text
+    #print r.text
     return (end_time-start_time).total_seconds()
 
 def glist():
     start_time = datetime.now()
     r = requests.get(appurl+"/list")
     end_time = datetime.now()
-    print r.text
+    #print r.text
     return (end_time-start_time).total_seconds()
 
 def filesizelist():
@@ -85,7 +85,7 @@ class myThread (threading.Thread):
         self.operation = operation
     def run(self):
         global last_filenum
-        print "Starting " + self.name
+        #print "Starting " + self.name
         threadLock.acquire()
         my_filenum = last_filenum + 1
         last_filenum = my_filenum
