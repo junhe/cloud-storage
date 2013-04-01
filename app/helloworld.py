@@ -31,11 +31,17 @@ class MainHandler(webapp2.RequestHandler):
   def get(self):
     upload_url = blobstore.create_upload_url('/upload')
     self.response.out.write('<html><body>')
+    self.response.out.write("<h1>Basic Credit</h1>")
+    
+    # insert
+    self.response.out.write("<h4>insert</h4>")
     self.response.out.write('<form action="%s" method="POST" enctype="multipart/form-data">' % upload_url)
     self.response.out.write('File Key:<input type="text" name="filekey">')
     self.response.out.write("""Upload File: <input type="file" name="file"><br> <input type="submit"
         name="submit" value="Submit"> </form>""")
+    
     # check    
+    self.response.out.write("<h4>Check</h4>")
     self.response.out.write("""
           <hr>
           <form action="/check" method="post">
@@ -44,6 +50,7 @@ class MainHandler(webapp2.RequestHandler):
           </form>
           <hr>""")
     # delete
+    self.response.out.write("<h4>remove</h4>")
     self.response.out.write("""
           <hr>
           <form action="/remove" method="post">
@@ -52,6 +59,7 @@ class MainHandler(webapp2.RequestHandler):
           </form>
           <hr>""")          
     # Download     
+    self.response.out.write("<h4>find</h4>")
     self.response.out.write("""
           <hr>
           <form action="/download" method="post">
@@ -60,7 +68,52 @@ class MainHandler(webapp2.RequestHandler):
           </form>
           <hr>""")
     # List
+    self.response.out.write("<h4>list</h4>")
     self.response.out.write("""<a href="/list">List</a>""")
+    
+    # Extra Credit
+    self.response.out.write("<h1>Extra Credit</h1>")
+    # Check
+    self.response.out.write("<h4>check cloud storage</h4>")
+    self.response.out.write("""
+          <hr>
+          <form action="/checkcloudstorage" method="post">
+            <div>File Key:<input type="text" name="filekey"></div>
+            <div><input type="submit" value="Check This File Key"></div>
+          </form>
+          <hr>""")
+    
+    # checkCache
+    self.response.out.write("<h4>checkCache</h4>")
+    self.response.out.write("""
+          <hr>
+          <form action="/checkcache" method="post">
+            <div>File Key:<input type="text" name="filekey"></div>
+            <div><input type="submit" value="Check if This File Key is in Cache"></div>
+          </form>
+          <hr>""")
+    # removeAllCache
+    self.response.out.write("<h4>removeAllCache</h4>")
+    self.response.out.write("""
+          <hr>
+          <form action="/removeallcache" method="post"
+            <div><input type="submit" value="Remove All Cache"></div>
+          </form>
+          <hr>""")
+          
+    # removeAll
+    self.response.out.write("<h4>RemoveAll</h4>")
+    self.response.out.write("""
+          <hr>
+          <form action="/removeall" method="post"
+            <div><input type="submit" value="Remove All"></div>
+          </form>
+          <hr>""")
+    
+          
+    
+    
+    
     self.response.out.write('</body></html>')
 
 class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
@@ -135,6 +188,42 @@ class CheckHandler(webapp2.RequestHandler):
     else:
       self.response.out.write("Key(%s) exists." % fkeystr)
 
+class CheckcacheHandler(webapp2.RequestHandler):
+  def post(self):
+    fkeystr = self.request.get("filekey")
+    filekeys = FileKey.all()
+    filekeys.filter('__key__ =', 
+      db.Key.from_path("FileKey", fkeystr, parent= filelist_key()))
+    filekeys.filter('filelocation =', 'memcache')
+    if filekeys.count() == 0:
+      self.response.out.write("Key(%s) does NOT exists in cache." % fkeystr)
+    else:
+      self.response.out.write("Key(%s) exists in cache." % fkeystr)
+      
+class CheckcloudstorageHandler(webapp2.RequestHandler):
+  def post(self):
+    fkeystr = self.request.get("filekey")
+    filekeys = FileKey.all()
+    filekeys.filter('__key__ =', 
+      db.Key.from_path("FileKey", fkeystr, parent= filelist_key()))
+    filekeys.filter('filelocation =', 'cloudstorage')
+    if filekeys.count() == 0:
+      self.response.out.write("Key(%s) does NOT exists in distributed storage(Google Cloud Storage." % fkeystr)
+    else:
+      self.response.out.write("Key(%s) exists in distributed storage(Google Cloud Storage." % fkeystr)
+
+class removeallcacheHandler(webapp2.RequestHandler):
+  def post(self):
+    filekeys = FileKey.all()
+    filekeys.filter('filelocation =', 'memcache')
+    self.response.out.write("<b>Removed from cache</b>:</br>")
+    for filekey in filekeys:
+      self.response.out.write(filekey.key().id_or_name())
+      memcache.delete(filekey.key().id_or_name())
+      self.response.out.write('</br>')
+    for filekey in filekeys:
+      db.delete(filekey.key())
+      
 class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
   def post(self):
     fkeystr = self.request.get("filekey")
@@ -186,6 +275,10 @@ app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/list', ListHandler),
                                ('/check', CheckHandler),
                                ('/download', DownloadHandler),
-                               ('/remove', RemoveHandler),                               
-                               ('/serve/([^/]+)?', ServeHandler)],
+                               ('/remove', RemoveHandler),
+                               ('/checkcache', CheckcacheHandler),
+                               ('/removeallcache', removeallcacheHandler),
+                               ('/removeall', removeallHandler),
+                               ('/serve/([^/]+)?', ServeHandler),
+                               ('/checkcloudstorage', CheckcloudstorageHandler)],
                               debug=True)
