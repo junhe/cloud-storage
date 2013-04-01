@@ -17,7 +17,7 @@ except AttributeError:
 
 BIGFILEBASE = 100*1024     #< 100 KB is a small file
 BUCKET_PATH = '/gs/buckcs553pa3'
-
+ENABLEMEMCACHE = False
 class FileKey(db.Model):
   """The key of of the file in memcache and cloud storage"""
   #fkey = db.StringProperty()
@@ -168,7 +168,7 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     self.response.out.write("</br>Blob info size:")
     self.response.out.write(blob_info.size)
     
-    if blob_info.size <= BIGFILEBASE:
+    if blob_info.size <= BIGFILEBASE and ENABLEMEMCACHE:
       # small file, put to memcache
       memcache.add(mykey, blob_info)
       filekey.filelocation = "memcache"
