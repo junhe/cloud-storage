@@ -86,7 +86,7 @@ class UploadHandler(blobstore_handlers.BlobstoreUploadHandler):
       filekey.filelocation = "memcache"
       self.response.out.write("</br> File saved to memcache")
     else:
-      self.response.out.write("</br> File saved to Google Cloud Storage. (Not implemented yet)")
+      self.response.out.write("</br> File saved to Google Cloud Storage.")
       # use filekey key name as the obj name in bucket
       write_path = files.gs.create(BUCKET_PATH+"/"+filekey.key().id_or_name(), mime_type='text/plain',
                                      acl='public-read')
@@ -148,7 +148,7 @@ class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
           blob_info = memcache.get(ifile.key().id_or_name()) 
           self.send_blob(blob_info)
         else:
-          #self.response.out.write("File is in Cloud Storage (Not Implemented")
+          #self.response.out.write("File is in Cloud Storage")
           with files.open(BUCKET_PATH+"/"+ifile.key().id_or_name(), 'r') as fp:
             buf = fp.read(1000000)
             while buf:
@@ -165,6 +165,13 @@ class RemoveHandler(webapp2.RequestHandler):
     if filekeys.count() == 0:
       self.response.out.write("Key(%s) does NOT exists." % fkeystr)
     else:
+      f = db.get(thekey)
+      if f.filelocation == "memcache":
+        memcache.delete(f.key().id_or_name())
+        self.response.out.write("Deleted from Memcache</br>")
+      else:
+        files.delete(BUCKET_PATH+"/"+f.key().id_or_name())
+        self.response.out.write("Deleted from Google Cloud Storage</br>")
       db.delete(thekey)
       self.response.out.write("Key(%s) removed." % fkeystr)
       
