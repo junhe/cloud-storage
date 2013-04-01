@@ -110,9 +110,44 @@ class MainHandler(webapp2.RequestHandler):
           </form>
           <hr>""")
     
+    # CacheSizeElem
+    self.response.out.write("<h4>CacheSizeElem</h4>")
+    self.response.out.write("""
+          <hr>
+          <form action="/cachesizeelem" method="post"
+            <div><input type="submit" value="CacheSizeElem(number of files in cache)"></div>
+          </form>
+          <hr>""") 
           
+    # StorageSizeElem
+    self.response.out.write("<h4>StorageSizeElem</h4>")
+    self.response.out.write("""
+          <hr>
+          <form action="/storagesizeelem" method="post"
+            <div><input type="submit" value="StorageSizeElem(number of files in cloud storage)"></div>
+          </form>
+          <hr>""")       
     
-    
+    # Find in File
+    self.response.out.write("<h4>FindInFile</h4>")
+    self.response.out.write("""
+          <hr>
+          <form action="/findinfile" method="post">
+            <div>File Key:<input type="text" name="filekey"></div>
+            <div>Expression:<input type="text" name="regexp"></div>
+            <div><input type="submit" value="Check This File Key"></div>
+          </form>
+          <hr>""")
+
+    # Listing
+    self.response.out.write("<h4>Listing</h4>")
+    self.response.out.write("""
+          <hr>
+          <form action="/listing" method="post">
+            <div>Expression:<input type="text" name="regexp"></div>
+            <div><input type="submit" value="List all files with expression"></div>
+          </form>
+          <hr>""")
     
     self.response.out.write('</body></html>')
 
@@ -224,6 +259,20 @@ class removeallcacheHandler(webapp2.RequestHandler):
     for filekey in filekeys:
       db.delete(filekey.key())
       
+class removeallHandler(webapp2.RequestHandler):
+  def post(self):
+    filekeys = FileKey.all()
+    self.response.out.write("<b>Removed all</b>:</br>")
+    for filekey in filekeys:
+      self.response.out.write(filekey.key().id_or_name())
+      if filekey.filelocation == "memcache":
+        memcache.delete(filekey.key().id_or_name())
+      else:
+        files.delete(BUCKET_PATH+"/"+str(filekey.key().id_or_name()))
+      self.response.out.write('</br>')
+    for filekey in filekeys:
+      db.delete(filekey.key())
+      
 class DownloadHandler(blobstore_handlers.BlobstoreDownloadHandler):
   def post(self):
     fkeystr = self.request.get("filekey")
@@ -268,6 +317,65 @@ class UploadURLHandler(webapp2.RequestHandler):
   def get(self):
     upload_url = blobstore.create_upload_url('/upload')
     self.response.out.write(upload_url)  
+
+class cachesizeelemHandler(webapp2.RequestHandler):
+  def post(self):
+    filekeys = FileKey.all()
+    filekeys.filter('filelocation =', 'memcache')
+    self.response.out.write("<b>Num of files in cache</b>: ")
+    self.response.out.write(filekeys.count())
+    
+class storagesizeelemHandler(webapp2.RequestHandler):
+  def post(self):
+    filekeys = FileKey.all()
+    filekeys.filter('filelocation =', 'cloudstorage')
+    self.response.out.write("<b>Num of files in cloud storage</b>: ")
+    self.response.out.write(filekeys.count())
+
+class findinfileHandler(blobstore_handlers.BlobstoreDownloadHandler):
+  def post(self):
+    fkeystr = self.request.get("filekey")
+    regexpstr = self.request.get("regexp")
+    filekeys = FileKey.all()
+    filekeys.filter('__key__ =', db.Key.from_path("FileKey", fkeystr, parent=filelist_key()))
+    if filekeys.count() == 0:
+      self.response.out.write("Key(%s) does NOT exists." % fkeystr)
+    else:
+      for ifile in filekeys:
+        self.response.out.write("Matching contents")
+        if ifile.filelocation == "memcache":
+          blob_info = memcache.get(ifile.key().id_or_name()) 
+          #elf.send_blob(blob_info)
+          blob_reader = blob_info.open()
+          for line in blob_reader:
+            if regexpstr in line:
+              self.response.out.write(line)
+        else:
+          #self.response.out.write("File is in Cloud Storage")
+          with files.open(BUCKET_PATH+"/"+ifile.key().id_or_name(), 'r') as fp:
+            buf = fp.read(1000)
+            while buf:
+                if regexpstr in buf:
+                  self.response.out.write(buf)
+                buf = fp.read(1000000)
+                
+          #self.response.out.write("From Google Cloud Storage file:" 
+          #                    + ifile.key().id_or_name())
+          
+class ListingHandler(webapp2.RequestHandler):
+  def post(self):
+    #filekeys = db.GqlQuery("SELECT * "
+    #                        "FROM FileKey "
+    #                        "WHERE ANCESTOR IS :1",# AND fkey IN ('ttt')",
+    #                        filelist_key())
+    filekeys = FileKey.all()
+    regexpstr = self.request.get("regexp")
+    #filekeys.filter(' __key__ IN ', regexpstr)
+    self.response.out.write("<b>List with %s</b>:</br>" % regexpstr)
+    for filekey in filekeys:
+      if regexpstr in filekey.key().id_or_name():
+        self.response.out.write(filekey.key().id_or_name())
+        self.response.out.write('</br>')
       
 app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/upload', UploadHandler),
@@ -279,6 +387,10 @@ app = webapp2.WSGIApplication([('/', MainHandler),
                                ('/checkcache', CheckcacheHandler),
                                ('/removeallcache', removeallcacheHandler),
                                ('/removeall', removeallHandler),
+                               ('/cachesizeelem', cachesizeelemHandler),
+                               ('/storagesizeelem', storagesizeelemHandler),
+                               ('/findinfile', findinfileHandler),
+                               ('/listing', ListingHandler),
                                ('/serve/([^/]+)?', ServeHandler),
                                ('/checkcloudstorage', CheckcloudstorageHandler)],
                               debug=True)
