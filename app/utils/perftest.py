@@ -33,7 +33,7 @@ if __name__ == '__main__':
                            stderr=logf)
             proc.wait()
             for line in proc.stdout:
-                resultf.write( line + "\n" ) 
+                resultf.write( line ) 
                 sys.stdout.flush()
     
     logf.close()

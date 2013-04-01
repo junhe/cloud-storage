@@ -83,6 +83,7 @@ class myThread (threading.Thread):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.operation = operation
+        self.perf = []
     def run(self):
         global last_filenum
         #print "Starting " + self.name
@@ -92,19 +93,23 @@ class myThread (threading.Thread):
         threadLock.release()
         
         while my_filenum < nfiles:
+            dur = 0
+            #print "ThreadID",self.threadID
             if self.operation == "insert":
-                insert(str(my_filenum), 
+                dur = insert(str(my_filenum), 
                        "testfiles/"+str(my_filenum)+".txt")
             elif self.operation == "find":
-                find(str(my_filenum))
+                dur = find(str(my_filenum))
             elif self.operation == "remove":
-                remove(str(my_filenum))
+                dur = remove(str(my_filenum))
+
+            # time-duration, file-num
+            self.perf.append( [ str(dur), str(my_filenum) ] ) 
+
             threadLock.acquire()
             my_filenum = last_filenum + 1
             last_filenum = my_filenum
             threadLock.release()
-
-
 
 if __name__ == '__main__':
     #
@@ -114,8 +119,7 @@ if __name__ == '__main__':
     #print remove('1.txt')
     #print glist()
     
-    #filesizes = filesizelist()
-    #print filesizes
+    filesizes = filesizelist()
     
     if len(sys.argv) != 3:
         print "Usage: %s NumThreads Operations" % sys.argv[0]
@@ -133,10 +137,20 @@ if __name__ == '__main__':
     for t in threads:
         t.join()
     
+    allperf = []
+    for t in threads:
+        #print "IN merge:", t.perf
+        allperf = allperf + t.perf
+
     end_time = datetime.now()
     # nthreads operations totaltime
-    print nthreads, "insert", (end_time-start_time).total_seconds()
-
-
+    totaltime = (end_time-start_time).total_seconds()
+    print nthreads, operation, totaltime, "ALLOPERATIONS"
+    #print allperf
+    for perf in allperf:
+        # num-threads, operation, op-file-size, single-op-time, total-time
+        opdur = perf[0]        
+        fnumstr = perf[1]
+        print nthreads, operation, filesizes[int(fnumstr)], opdur, totaltime, "SINGLEOPERATION"
 
 
