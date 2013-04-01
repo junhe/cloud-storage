@@ -3,7 +3,7 @@
 
 import itertools,subprocess
 import sys
-from time import gmtime, strftime
+from time import gmtime, strftime, sleep
 
 nthreads = ["1","4"]
 operations = ["insert", "find", "remove"]
@@ -26,15 +26,17 @@ if __name__ == '__main__':
 
     for rep in range(0,2):
         for para in paralist:
-            print para,
+            print para
+            sys.stdout.flush()
             mycmd = "python runtest.py".split() + list(para)
             proc = subprocess.Popen(mycmd,
-                           stdout=subprocess.PIPE,
-                           stderr=logf)
+                           stdout=subprocess.PIPE)
+                           #stderr=logf)
             proc.wait()
             for line in proc.stdout:
                 resultf.write( line ) 
                 sys.stdout.flush()
+            sleep(600) # slep for a while for consistency.
     
     logf.close()
     resultf.close()

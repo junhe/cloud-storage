@@ -27,6 +27,7 @@ def insert(fkey, fpath):
     r = requests.post(uploadurl, data=payload, files=files)
     #print r.text
     end_time = datetime.now()
+    print >> sys.stderr, "Doing ", fkey
     return (end_time-start_time).total_seconds()
 
 def check(fkey):
@@ -35,6 +36,7 @@ def check(fkey):
     r = requests.post(appurl+"/check", data=payload)
     end_time = datetime.now()
     #print r.text
+    print >> sys.stderr, "Doing ", fkey
     return (end_time-start_time).total_seconds()
 
 def find(fkey):
@@ -42,6 +44,7 @@ def find(fkey):
     payload = {'filekey':fkey}
     r = requests.post(appurl+"/download", data=payload)
     end_time = datetime.now()
+    print >> sys.stderr, "Doing ", fkey
     #print r.text
     return (end_time-start_time).total_seconds()
 
@@ -50,6 +53,7 @@ def remove(fkey):
     payload = {'filekey':fkey}
     r = requests.post(appurl+"/remove", data=payload)
     end_time = datetime.now()
+    print >> sys.stderr, "Doing ", fkey
     #print r.text
     return (end_time-start_time).total_seconds()
 
@@ -58,6 +62,7 @@ def glist():
     r = requests.get(appurl+"/list")
     end_time = datetime.now()
     #print r.text
+    print >> sys.stderr, "Doing ", fkey
     return (end_time-start_time).total_seconds()
 
 def filesizelist():
